@@ -122,11 +122,19 @@ async function waitForBackend(baseUrl) {
   throw new Error('The local PDF service did not become ready within 90 seconds. Check the Reage server log.');
 }
 
+function isLocalUrl(url, baseUrl) {
+  try {
+    return new URL(url).origin === new URL(baseUrl).origin;
+  } catch {
+    return false;
+  }
+}
+
 function openExternal(url) {
   try {
     const parsed = new URL(url);
     if (['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
-      void shell.openExternal(url);
+      void shell.openExternal(url).catch(() => {});
     }
   } catch {
     // Ignore malformed or unsupported navigation targets.
@@ -156,12 +164,12 @@ function createWindow(baseUrl) {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (!url.startsWith(baseUrl)) openExternal(url);
+    if (!isLocalUrl(url, baseUrl)) openExternal(url);
     return { action: 'deny' };
   });
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (url.startsWith(baseUrl)) return;
+    if (isLocalUrl(url, baseUrl)) return;
     event.preventDefault();
     openExternal(url);
   });
