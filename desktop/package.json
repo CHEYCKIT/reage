@@ -1,0 +1,47 @@
+{
+  "name": "reage-windows-portable",
+  "version": "0.7.0",
+  "private": true,
+  "description": "Portable Windows desktop package for Reage PDF editor",
+  "license": "AGPL-3.0-or-later",
+  "main": "main.cjs",
+  "scripts": {
+    "package:portable": "electron-builder --win portable --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "org.reage.pdfeditor",
+    "productName": "Reage",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "asar": true,
+    "files": [
+      "main.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/backend/reage-server.exe",
+        "to": "reage-server.exe"
+      },
+      {
+        "from": "resources/reage.ico",
+        "to": "reage.ico"
+      }
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "resources/reage.ico"
+    },
+    "portable": {
+      "artifactName": "Reage-0.7.0-Windows-Portable.exe"
+    }
+  }
+}
