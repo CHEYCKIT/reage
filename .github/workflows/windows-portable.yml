@@ -108,8 +108,9 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: portable-v@@{ steps.version.outputs.version }}
-          name: Reage v@@{ steps.version.outputs.version }} — Windows Portable
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: portable-v${{ steps.version.outputs.version }}
+          name: Reage v${{ steps.version.outputs.version }} — Windows Portable
           target_commitish: main
           body: |
             **Windows x64 portable build of Reage.**
@@ -119,10 +120,8 @@ jobs:
             - First-use OCR language models and optional Google Fonts downloads require internet access.
             - Built from the CHEYCKIT/reage fork. See the repository's desktop/README.md for runtime and privacy notes.
           files: |
-            desktop/release/Reage-@@{ steps.version.outputs.version }}-Windows-Portable.exe
-            desktop/release/Reage-@@{ steps.version.outputs.version }}-Windows-Portable.exe.sha256
+            desktop/release/Reage-${{ steps.version.outputs.version }}-Windows-Portable.exe
+            desktop/release/Reage-${{ steps.version.outputs.version }}-Windows-Portable.exe.sha256
           fail_on_unmatched_files: true
           overwrite_files: true
           make_latest: false
-        env:
-          GITHUB_TOKEN: @@{ secrets.GITHUB_TOKEN }}
