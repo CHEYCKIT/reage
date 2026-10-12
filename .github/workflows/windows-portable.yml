@@ -1,4 +1,4 @@
-name: Windows portable release
+name: Windows desktop release
 
 on:
   workflow_dispatch:
@@ -7,12 +7,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: windows-portable-release
+  group: windows-desktop-release
   cancel-in-progress: false
 
 jobs:
   release:
-    name: Build and publish Windows x64 portable app
+    name: Build and publish Windows x64 installer and portable app
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -37,7 +37,7 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $version = node -e "const fs=require('node:fs'); const root=JSON.parse(fs.readFileSync('package.json','utf8')); const file='desktop/package.json'; const desktop=JSON.parse(fs.readFileSync(file,'utf8')); desktop.version=root.version; desktop.build.portable.artifactName='Reage-'+root.version+'-Windows-Portable.exe'; fs.writeFileSync(file,JSON.stringify(desktop,null,2)+'\n'); process.stdout.write(root.version)"
+          $version = node -e "const fs=require('node:fs'); const root=JSON.parse(fs.readFileSync('package.json','utf8')); const file='desktop/package.json'; const desktop=JSON.parse(fs.readFileSync(file,'utf8')); desktop.version=root.version; desktop.build.portable.artifactName='Reage-'+root.version+'-Windows-Portable.exe'; desktop.build.nsis.artifactName='Reage-'+root.version+'-Windows-Setup.exe'; fs.writeFileSync(file,JSON.stringify(desktop,null,2)+'\n'); process.stdout.write(root.version)"
           "version=$version" >> $env:GITHUB_OUTPUT
           "APP_VERSION=$version" >> $env:GITHUB_ENV
 
@@ -93,33 +93,41 @@ jobs:
         working-directory: desktop
         run: npm install --no-audit --no-fund --package-lock=false
 
-      - name: Package portable executable
+      - name: Package Windows installer and portable executable
         working-directory: desktop
-        run: npm run package:portable
+        run: npm run package:windows
 
       - name: Verify artifact and write checksum
         shell: pwsh
         run: |
-          $portable = "desktop/release/Reage-$env:APP_VERSION-Windows-Portable.exe"
-          if (-not (Test-Path $portable)) { throw "Portable executable not found: $portable" }
-          $hash = (Get-FileHash $portable -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $(Split-Path $portable -Leaf)" | Set-Content "$portable.sha256" -Encoding ascii
+          $artifacts = @(
+            "desktop/release/Reage-$env:APP_VERSION-Windows-Setup.exe",
+            "desktop/release/Reage-$env:APP_VERSION-Windows-Portable.exe"
+          )
+          foreach ($artifact in $artifacts) {
+            if (-not (Test-Path $artifact)) { throw "Expected Windows release artifact not found: $artifact" }
+            $hash = (Get-FileHash $artifact -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $(Split-Path $artifact -Leaf)" | Set-Content "$artifact.sha256" -Encoding ascii
+          }
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: portable-v${{ steps.version.outputs.version }}
-          name: Reage v${{ steps.version.outputs.version }} — Windows Portable
-          target_commitish: main
+          tag_name: windows-v${{ steps.version.outputs.version }}
+          name: Reage v${{ steps.version.outputs.version }} — Windows Installer + Portable
+          target_commitish: ${{ github.sha }}
           body: |
-            **Windows x64 portable build of Reage.**
+            **Windows x64 desktop release of Reage.**
 
-            - Single executable; no installation wizard or separate Python installation required.
-            - PDF editing uses the bundled local processing service; documents are handled locally and sessions are temporary.
+            - `Reage-${{ steps.version.outputs.version }}-Windows-Setup.exe`: standard per-user Windows installer with Start menu and optional desktop shortcuts, plus a selectable install directory. No administrator rights or separate Python installation are required.
+            - `Reage-${{ steps.version.outputs.version }}-Windows-Portable.exe`: single-file portable build without an installation step.
+            - Both packages include the local PDF-processing service; documents are handled on-device and editing sessions are temporary.
             - First-use OCR language models and optional Google Fonts downloads require internet access.
-            - Built from the CHEYCKIT/reage fork. See the repository's desktop/README.md for runtime and privacy notes.
+            - SHA-256 checksum files are included for both executable downloads.
           files: |
+            desktop/release/Reage-${{ steps.version.outputs.version }}-Windows-Setup.exe
+            desktop/release/Reage-${{ steps.version.outputs.version }}-Windows-Setup.exe.sha256
             desktop/release/Reage-${{ steps.version.outputs.version }}-Windows-Portable.exe
             desktop/release/Reage-${{ steps.version.outputs.version }}-Windows-Portable.exe.sha256
           fail_on_unmatched_files: true
